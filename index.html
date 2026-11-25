@@ -100,8 +100,34 @@
         </form>
     </dialog>
 
+    <dialog id="shareDialog">
+        <div class="modal share-modal">
+            <div class="modal-head">
+                <div>
+                    <div class="type-tag">Angel Advent Calendar</div>
+                    <h2>Takvimi paylaş</h2>
+                </div>
+                <button class="icon-btn" data-close aria-label="Kapat">×</button>
+            </div>
+            <p class="share-intro">Bağlantıyı ya da QR kodunu yalnızca takvimi görmesini istediğin kişiyle paylaş.</p>
+            <div id="shareQr" class="share-qr" aria-label="Takvim paylaşım QR kodu"></div>
+            <label class="share-link-label">Kısa bağlantı
+                <input id="shareUrl" type="text" readonly>
+            </label>
+            <p id="shareNote" class="small" aria-live="polite"></p>
+            <div class="actions">
+                <button class="btn primary" id="copyShareLink" type="button">Bağlantıyı kopyala</button>
+                <button class="btn" id="downloadQr" type="button" disabled>QR kodunu indir</button>
+                <button class="btn" id="nativeShare" type="button">Başka uygulamada paylaş</button>
+                <button class="btn" data-close type="button">Kapat</button>
+            </div>
+        </div>
+    </dialog>
+
     <div class="toast" id="toast" role="status"></div>
-    <script src="script.js?v=2" defer></script>
+    <script src="qrcode.min.js" defer></script>
+    <script src="share-config.js?v=1" defer></script>
+    <script src="script.js?v=3" defer></script>
 </body>
 
 </html>

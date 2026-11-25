@@ -108,15 +108,9 @@
             const n = index + 1;
             const b = document.createElement('button');
 
-            b.className = 'door' +
-                (data.opened.includes(n) ? ' done' : '') +
-                (day.photo ? ' has-photo' : '');
+            b.className = 'door' + (data.opened.includes(n) ? ' done' : '');
             b.type = 'button';
             b.setAttribute('aria-label', `${n}. gün${day.title ? ': ' + day.title : ''}`);
-
-            if (day.photo) {
-                b.style.setProperty('--photo', `url("${day.photo}")`);
-            }
 
             b.innerHTML = `<span class="num">${n}</span>`;
             b.addEventListener('click', () => {

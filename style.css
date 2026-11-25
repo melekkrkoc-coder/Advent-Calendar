@@ -476,3 +476,61 @@ dialog::backdrop {
   color: #fff;
   text-shadow: 0 1px 5px #000, 0 0 2px #000;
 }
+
+
+.share-modal {
+    display: grid;
+    gap: 10px;
+}
+
+.share-modal h2 {
+    margin-bottom: 4px;
+}
+
+.share-intro {
+    margin: 0;
+    color: #f5ecdd;
+    line-height: 1.5;
+}
+
+.share-qr {
+    display: grid;
+    place-items: center;
+    width: 256px;
+    min-height: 256px;
+    max-width: 100%;
+    margin: 6px auto;
+    padding: 8px;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.share-qr canvas,
+.share-qr img,
+.share-qr svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.share-link-label {
+    display: grid;
+    gap: 6px;
+    color: #e8ddc8;
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+#shareUrl {
+    width: 100%;
+    border: 1px solid #ffffff36;
+    border-radius: 12px;
+    padding: 11px;
+    background: #0e2923;
+    color: var(--cream);
+    font-size: .8rem;
+}
+
+#shareNote {
+    margin: 0;
+}

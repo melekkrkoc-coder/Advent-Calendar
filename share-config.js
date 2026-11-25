@@ -1,2 +1,2 @@
-// Worker ana adresini, worker.js dosyasını yayımladıktan sonra buraya yaz.
-window.ADVENT_SHARE_API = "";
+// Cloudflare Worker API address for encrypted calendar sharing.
+window.ADVENT_SHARE_API = "https://advent-calendar-share.melek-krkoc.workers.dev";

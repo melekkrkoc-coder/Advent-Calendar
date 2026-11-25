@@ -291,7 +291,7 @@
         if (!crypto.subtle) throw Error('Güvenli paylaşım için HTTPS gerekir.');
 
         const payload = JSON.stringify({ title: data.title, subtitle: data.subtitle, days: data.days });
-        const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+        const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 128 }, true, ['encrypt', 'decrypt']);
         const rawKey = new Uint8Array(await crypto.subtle.exportKey('raw', key));
         const iv = crypto.getRandomValues(new Uint8Array(12));
         const encrypted = new Uint8Array(await crypto.subtle.encrypt(
@@ -364,7 +364,7 @@
         const input = $('shareUrl');
         try {
             await navigator.clipboard.writeText(input.value);
-            toast('Kısa bağlantı kopyalandı.');
+            toast('Bağlantı kopyalandı.');
         } catch {
             input.focus();
             input.select();

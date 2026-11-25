@@ -1,5 +1,6 @@
 (() => {
     const KEY = 'advent-calendar-v2';
+    const SHARE_API = String(window.ADVENT_SHARE_API || '').replace(/\/+$/, '');
     const blankDay = () => ({
         type: 'Güzel bir not',
         title: 'Bugünün küçük sürprizi',
@@ -77,24 +78,43 @@
     };
 
     const loadSharedCalendar = async () => {
-        const token = new URLSearchParams(location.hash.slice(1)).get('calendar');
-        if (!token) return false;
+        const params = new URLSearchParams(location.hash.slice(1));
+        const shareId = params.get('share');
+        const legacyToken = params.get('calendar');
+        if (!shareId && !legacyToken) return false;
 
         try {
-            let stream = new Blob([base64UrlToBytes(token)]).stream();
+            let shared;
 
-            if ('DecompressionStream' in window) {
-                stream = stream.pipeThrough(new DecompressionStream('gzip'));
+            if (shareId) {
+                const keyText = params.get('key');
+                if (!SHARE_API || !keyText) throw Error('Paylaşılan takvim açılamadı.');
+
+                const response = await fetch(`${SHARE_API}/api/shares/${encodeURIComponent(shareId)}`);
+                if (!response.ok) throw Error(response.status === 404 ? 'Bu paylaşımın süresi dolmuş veya takvim bulunamadı.' : 'Takvim yüklenemedi. Tekrar dene.');
+                const stored = await response.json();
+                const packed = base64UrlToBytes(stored.ciphertext);
+                const key = await crypto.subtle.importKey('raw', base64UrlToBytes(keyText), { name: 'AES-GCM' }, false, ['decrypt']);
+                const clear = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: packed.slice(0, 12) }, key, packed.slice(12));
+                shared = JSON.parse(new TextDecoder().decode(clear));
+                storageKey = KEY + ':link:' + shareId;
+            } else {
+                let stream = new Blob([base64UrlToBytes(legacyToken)]).stream();
+
+                if ('DecompressionStream' in window) {
+                    stream = stream.pipeThrough(new DecompressionStream('gzip'));
+                }
+
+                shared = JSON.parse(await new Response(stream).text());
+                storageKey = KEY + ':link:' + legacyToken.slice(0, 32);
             }
 
-            const shared = JSON.parse(await new Response(stream).text());
             data = cleanCalendar(shared);
-            storageKey = KEY + ':link:' + token.slice(0, 32);
             save();
-            toast('Paylaşılan takvim açıldı.');
+            if (shareId) toast('Paylaşılan takvim açıldı.');
             return true;
-        } catch {
-            toast('Paylaşım bağlantısı geçersiz veya bozulmuş.');
+        } catch (error) {
+            toast(error.message || 'Paylaşım bağlantısı geçersiz veya bozulmuş.');
             return false;
         }
     };
@@ -251,50 +271,128 @@
         e.target.value = '';
     });
 
-    $('shareBtn').addEventListener('click', async () => {
+    const makeLegacyShareUrl = async () => {
+        if (!('CompressionStream' in window)) {
+            throw Error('Bu tarayıcı paylaşım bağlantısı oluşturamıyor.');
+        }
+
+        const payload = { title: data.title, subtitle: data.subtitle, days: data.days };
+        const compressed = new Blob([JSON.stringify(payload)])
+            .stream()
+            .pipeThrough(new CompressionStream('gzip'));
+        const bytes = new Uint8Array(await new Response(compressed).arrayBuffer());
+        const url = new URL(location.pathname, location.origin);
+        url.hash = 'calendar=' + bytesToBase64Url(bytes);
+        return url.href;
+    };
+
+    const makeEncryptedShareUrl = async () => {
+        if (!SHARE_API) return { url: await makeLegacyShareUrl(), legacy: true };
+        if (!crypto.subtle) throw Error('Güvenli paylaşım için HTTPS gerekir.');
+
+        const payload = JSON.stringify({ title: data.title, subtitle: data.subtitle, days: data.days });
+        const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+        const rawKey = new Uint8Array(await crypto.subtle.exportKey('raw', key));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const encrypted = new Uint8Array(await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv },
+            key,
+            new TextEncoder().encode(payload)
+        ));
+        const packed = new Uint8Array(iv.length + encrypted.length);
+        packed.set(iv, 0);
+        packed.set(encrypted, iv.length);
+        const ciphertext = bytesToBase64Url(packed);
+
+        const response = await fetch(`${SHARE_API}/api/shares`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ciphertext })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw Error(result.error === 'Calendar is too large.'
+                ? 'Takvim dosyası büyük. Fotoğrafları küçültüp tekrar dene.'
+                : 'Kısa bağlantı oluşturulamadı. Worker kurulumunu kontrol et.');
+        }
+
+        const url = new URL(location.pathname, location.origin);
+        url.hash = new URLSearchParams({ share: result.id, key: bytesToBase64Url(rawKey) }).toString();
+        return { url: url.href, legacy: false };
+    };
+
+    const showShareDialog = async () => {
+        const button = $('shareBtn');
+        button.disabled = true;
+        $('shareNote').textContent = 'Güvenli bağlantı hazırlanıyor…';
+
         try {
-            if (!('CompressionStream' in window)) {
-                throw Error('Bu tarayıcı paylaşım bağlantısını oluşturamıyor.');
-            }
+            const result = await makeEncryptedShareUrl();
+            $('shareUrl').value = result.url;
+            $('shareQr').replaceChildren();
+            $('downloadQr').disabled = true;
 
-            const payload = {
-                title: data.title,
-                subtitle: data.subtitle,
-                days: data.days
-            };
-
-            const compressed = new Blob([JSON.stringify(payload)])
-                .stream()
-                .pipeThrough(new CompressionStream('gzip'));
-
-            const bytes = new Uint8Array(
-                await new Response(compressed).arrayBuffer()
-            );
-
-            const url = new URL(location.href);
-            url.hash = 'calendar=' + bytesToBase64Url(bytes);
-
-            if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: data.title,
-                        text: 'Angel Advent Calendar takvimi',
-                        url: url.href
-                    });
-                    return;
-                } catch (e) {
-                    if (e.name === 'AbortError') return;
-                }
+            if (result.legacy) {
+                $('shareNote').textContent = 'Kısa bağlantı sunucusu henüz bağlanmadı. Bu geçici bağlantı uzun olabilir; ayar tamamlanınca kısa link ve QR kullanılabilir.';
+            } else {
+                $('shareNote').textContent = 'Takvim tarayıcıda şifrelendi. Bağlantıya sahip olan kişiler açabilir; linki yalnızca paylaşmak istediğin kişiye gönder.';
             }
 
             try {
-                await navigator.clipboard.writeText(url.href);
-                toast('Paylaşım bağlantısı kopyalandı.');
+                new QRCode($('shareQr'), {
+                    text: result.url,
+                    width: 240,
+                    height: 240,
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                $('downloadQr').disabled = false;
             } catch {
-                window.prompt('Takvim bağlantısını kopyala:', url.href);
+                $('shareNote').textContent += ' QR üretilemedi; bağlantı fazla uzun olabilir.';
             }
-        } catch (e) {
-            toast(e.message || 'Bağlantı oluşturulamadı.');
+
+            $('shareDialog').showModal();
+        } catch (error) {
+            toast(error.message || 'Bağlantı oluşturulamadı.');
+        } finally {
+            button.disabled = false;
+        }
+    };
+
+    $('shareBtn').addEventListener('click', showShareDialog);
+
+    $('copyShareLink').addEventListener('click', async () => {
+        const input = $('shareUrl');
+        try {
+            await navigator.clipboard.writeText(input.value);
+            toast('Kısa bağlantı kopyalandı.');
+        } catch {
+            input.focus();
+            input.select();
+            const copied = document.execCommand('copy');
+            toast(copied ? 'Bağlantı kopyalandı.' : 'Bağlantıyı seçip kopyalayabilirsin.');
+        }
+    });
+
+    $('downloadQr').addEventListener('click', () => {
+        const canvas = $('shareQr').querySelector('canvas');
+        if (!canvas) return toast('Önce QR kodu oluştur.');
+        const link = document.createElement('a');
+        link.download = 'angel-advent-calendar-qr.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+
+    $('nativeShare').addEventListener('click', async () => {
+        const url = $('shareUrl').value;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: data.title, text: 'Angel Advent Calendar takvimi', url });
+            } else {
+                await navigator.clipboard.writeText(url);
+                toast('Bağlantı kopyalandı.');
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') toast('Paylaşım açılamadı.');
         }
     });
 
@@ -315,9 +413,12 @@
         });
     });
 
+    const initialShare = new URLSearchParams(location.hash.slice(1)).get('share');
+    if (initialShare) storageKey = KEY + ':link:' + initialShare;
+
     try {
         const saved = JSON.parse(
-            localStorage.getItem(storageKey) || localStorage.getItem(KEY)
+            localStorage.getItem(storageKey) || (!initialShare ? localStorage.getItem(KEY) : null)
         );
 
         if (saved && Array.isArray(saved.days) && saved.days.length === 24) {

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="tr">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#12352d">
+    <title>Angel Advent Calendar</title>
+    <link rel="stylesheet" href="style.css?v=4">
+</head>
+
+<body>
+    <main class="wrap">
+        <div class="top">
+            <div class="brand">✦ Birlikte Advent Takvimi</div>
+            <nav class="toolbar" aria-label="Takvim işlemleri">
+                <button class="btn" id="editMode">Düzenle</button>
+                <button class="btn primary" id="shareBtn">Bağlantıyı paylaş</button>
+                <button class="btn" id="importBtn">İçe aktar</button>
+                <input id="fileInput" type="file" accept="application/json,.json" hidden>
+            </nav>
+        </div>
+
+        <header class="hero">
+            <h1 id="calendarTitle">Angel Advent Calendar</h1>
+            <p id="calendarSubtitle">24 days of surprises and delights</p>
+        </header>
+
+        <section class="grid" id="calendar" aria-label="Advent takvimi"></section>
+        <p class="notice">Takvimini kişiselleştir, sonra bağlantıyı paylaş.</p>
+        <footer class="footer">Takvimin bu cihazda otomatik kaydedilir.
+            © 2026 Melekcoder. All rights reserved.</footer>
+    </main>
+
+    <dialog id="dayDialog">
+        <div class="modal">
+            <div class="modal-head">
+                <span class="type-tag" id="dayType">Günün sürprizi</span>
+                <button class="icon-btn" data-close aria-label="Kapat">×</button>
+            </div>
+            <h2 id="dayTitle"></h2>
+            <img class="reveal-photo" id="dayPhoto" alt="Günün fotoğrafı">
+            <div class="reveal-text" id="dayText"></div>
+            <div class="actions">
+                <button class="btn primary" id="editDay">Bu günü düzenle</button>
+                <button class="btn" data-close>Kapat</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="editDialog">
+        <form class="modal form" id="editForm">
+            <div class="modal-head">
+                <div>
+                    <div class="type-tag">Takvimi kişiselleştir</div>
+                    <h2 id="editHeading">Günü düzenle</h2>
+                </div>
+                <button type="button" class="icon-btn" data-close aria-label="Kapat">×</button>
+            </div>
+
+            <label>Takvim başlığı
+                <input id="titleInput" maxlength="60" placeholder="Örn. Bizim Aralık Takvimimiz">
+            </label>
+
+            <label>Kısa açıklama
+                <input id="subtitleInput" maxlength="140" placeholder="Bu takvimi kime hazırladın?">
+            </label>
+
+            <label>Sürpriz türü
+                <select id="typeInput">
+                    <option>Güzel bir not</option>
+                    <option>Fotoğraf anısı</option>
+                    <option>Mini görev</option>
+                    <option>Hediye fikri</option>
+                    <option>Birlikte yapılacak</option>
+                </select>
+            </label>
+
+            <label>Başlık
+                <input id="dayTitleInput" maxlength="70" placeholder="Güne özel başlık">
+            </label>
+
+            <label>Notun veya sürprizin
+                <textarea id="dayTextInput" maxlength="1200"
+                    placeholder="Bir anı, mini görev, şarkı bağlantısı ya da güzel bir mesaj yaz..."></textarea>
+            </label>
+
+            <label>Fotoğraf ekle
+                <input id="photoInput" type="file" accept="image/*">
+                <span class="small">Fotoğraf cihazında küçültülerek kaydedilir. En iyi sonuç için paylaşmaya uygun
+                    fotoğraflar seç.</span>
+            </label>
+
+            <button class="btn" type="button" id="removePhoto">Fotoğrafı kaldır</button>
+
+            <div class="actions">
+                <button class="btn primary" type="submit">Kaydet</button>
+                <button class="btn" type="button" data-close>Vazgeç</button>
+            </div>
+        </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status"></div>
+    <script src="script.js" defer></script>
+</body>
+
+</html>

@@ -271,23 +271,8 @@
         e.target.value = '';
     });
 
-    const makeLegacyShareUrl = async () => {
-        if (!('CompressionStream' in window)) {
-            throw Error('Bu tarayıcı paylaşım bağlantısı oluşturamıyor.');
-        }
-
-        const payload = { title: data.title, subtitle: data.subtitle, days: data.days };
-        const compressed = new Blob([JSON.stringify(payload)])
-            .stream()
-            .pipeThrough(new CompressionStream('gzip'));
-        const bytes = new Uint8Array(await new Response(compressed).arrayBuffer());
-        const url = new URL(location.pathname, location.origin);
-        url.hash = 'calendar=' + bytesToBase64Url(bytes);
-        return url.href;
-    };
-
     const makeEncryptedShareUrl = async () => {
-        if (!SHARE_API) return { url: await makeLegacyShareUrl(), legacy: true };
+        if (!SHARE_API) throw Error('Kısa bağlantı sunucusu henüz bağlanmadı. Kurulum için CLOUDFLARE_SETUP.md dosyasını aç.');
         if (!crypto.subtle) throw Error('Güvenli paylaşım için HTTPS gerekir.');
 
         const payload = JSON.stringify({ title: data.title, subtitle: data.subtitle, days: data.days });
@@ -322,6 +307,15 @@
     };
 
     const showShareDialog = async () => {
+        if (!SHARE_API) {
+            $('shareUrl').value = '';
+            $('shareQr').replaceChildren();
+            $('downloadQr').disabled = true;
+            $('shareNote').textContent = 'Kısa bağlantı ve QR için Worker kurulumu gerekiyor. GitHub deposundaki CLOUDFLARE_SETUP.md adımlarını tamamlayınca burada hazır olacak.';
+            $('shareDialog').showModal();
+            return;
+        }
+
         const button = $('shareBtn');
         button.disabled = true;
         $('shareNote').textContent = 'Güvenli bağlantı hazırlanıyor…';
@@ -332,11 +326,7 @@
             $('shareQr').replaceChildren();
             $('downloadQr').disabled = true;
 
-            if (result.legacy) {
-                $('shareNote').textContent = 'Kısa bağlantı sunucusu henüz bağlanmadı. Bu geçici bağlantı uzun olabilir; ayar tamamlanınca kısa link ve QR kullanılabilir.';
-            } else {
-                $('shareNote').textContent = 'Takvim tarayıcıda şifrelendi. Bağlantıya sahip olan kişiler açabilir; linki yalnızca paylaşmak istediğin kişiye gönder.';
-            }
+            $('shareNote').textContent = 'Takvim tarayıcıda şifrelendi. Bağlantıya sahip olan kişiler açabilir; linki yalnızca paylaşmak istediğin kişiye gönder.';
 
             try {
                 new QRCode($('shareQr'), {

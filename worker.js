@@ -1,4 +1,4 @@
-const MAX_CIPHERTEXT_CHARS = 2_500_000;
+const MAX_CIPHERTEXT_CHARS = 16_000_000;
 const SHARE_TTL_SECONDS = 60 * 60 * 24 * 365;
 
 function corsHeaders(request, env) {
